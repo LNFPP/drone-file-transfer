@@ -23,6 +23,13 @@ jobs:
         run: |
           APP="Drone File Transfer.app"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          # App icon: Resources/AppIcon.png (1024x1024) -> AppIcon.icns
+          mkdir AppIcon.iconset
+          for s in 16 32 128 256 512; do
+            sips -z $s $s Resources/AppIcon.png --out AppIcon.iconset/icon_${s}x${s}.png >/dev/null
+            sips -z $((s*2)) $((s*2)) Resources/AppIcon.png --out AppIcon.iconset/icon_${s}x${s}@2x.png >/dev/null
+          done
+          iconutil -c icns AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
           cp "$BIN/DroneFileTransfer" "$APP/Contents/MacOS/DroneFileTransfer"
           cat > "$APP/Contents/Info.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
@@ -33,6 +40,7 @@ jobs:
             <key>CFBundleIdentifier</key><string>com.lotshots.sorter</string>
             <key>CFBundleName</key><string>Drone File Transfer</string>
             <key>CFBundleDisplayName</key><string>Drone File Transfer</string>
+            <key>CFBundleIconFile</key><string>AppIcon</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>CFBundleShortVersionString</key><string>1.${GITHUB_RUN_NUMBER}</string>
             <key>CFBundleVersion</key><string>${GITHUB_RUN_NUMBER}</string>
