@@ -2,12 +2,12 @@ import SwiftUI
 import AppKit
 
 @main
-struct LotShotsSorterApp: App {
+struct DroneFileTransferApp: App {
     @StateObject private var settings = AppSettings()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     var body: some Scene {
-        WindowGroup("Lot Shots Sorter") {
+        WindowGroup("Drone File Transfer") {
             TabView {
                 RunView()
                     .tabItem { Label("Run", systemImage: "play.circle") }

@@ -1,4 +1,4 @@
-name: Build Lot Shots Sorter (Mac)
+name: Build Drone File Transfer (Mac)
 
 on:
   push:
@@ -21,18 +21,18 @@ jobs:
 
       - name: Make the .app
         run: |
-          APP="Lot Shots Sorter.app"
+          APP="Drone File Transfer.app"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-          cp "$BIN/LotShotsSorter" "$APP/Contents/MacOS/LotShotsSorter"
+          cp "$BIN/DroneFileTransfer" "$APP/Contents/MacOS/DroneFileTransfer"
           cat > "$APP/Contents/Info.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>CFBundleExecutable</key><string>LotShotsSorter</string>
+            <key>CFBundleExecutable</key><string>DroneFileTransfer</string>
             <key>CFBundleIdentifier</key><string>com.lotshots.sorter</string>
-            <key>CFBundleName</key><string>Lot Shots Sorter</string>
-            <key>CFBundleDisplayName</key><string>Lot Shots Sorter</string>
+            <key>CFBundleName</key><string>Drone File Transfer</string>
+            <key>CFBundleDisplayName</key><string>Drone File Transfer</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>CFBundleShortVersionString</key><string>1.${GITHUB_RUN_NUMBER}</string>
             <key>CFBundleVersion</key><string>${GITHUB_RUN_NUMBER}</string>
@@ -45,13 +45,13 @@ jobs:
           sed -i '' 's/^          //' "$APP/Contents/Info.plist"
           plutil -lint "$APP/Contents/Info.plist"
           codesign --force --deep -s - "$APP"
-          ditto -c -k --keepParent "$APP" LotShotsSorter-mac.zip
+          ditto -c -k --keepParent "$APP" DroneFileTransfer-mac.zip
 
       # Always-current download:
-      # https://github.com/LNFPP/drone-file-transfer/releases/latest/download/LotShotsSorter-mac.zip
+      # https://github.com/LNFPP/drone-file-transfer/releases/latest/download/DroneFileTransfer-mac.zip
       - name: Publish as the latest release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release delete build --yes --cleanup-tag || true
-          gh release create build LotShotsSorter-mac.zip --title "Lot Shots Sorter for Mac" --notes "build=${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})" --latest
+          gh release create build DroneFileTransfer-mac.zip --title "Drone File Transfer for Mac" --notes "build=${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})" --latest

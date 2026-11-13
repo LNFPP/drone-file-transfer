@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "LotShotsSorter",
+    name: "DroneFileTransfer",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "LotShotsSorter", path: "Sources/LotShotsSorter")
+        .executableTarget(name: "DroneFileTransfer", path: "Sources/DroneFileTransfer")
     ]
 )
