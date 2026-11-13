@@ -3,6 +3,7 @@ import AppKit
 
 struct SetupView: View {
     @EnvironmentObject var settings: AppSettings
+    @ObservedObject private var updater = Updater.shared
     @State private var newName = ""
     @State private var message: String?
 
@@ -57,6 +58,20 @@ struct SetupView: View {
                             .lineLimit(1).truncationMode(.middle)
                         Spacer()
                         Button("Reset") { settings.dronePath = "" }.disabled(settings.dronePath.isEmpty)
+                    }
+                    .padding(6)
+                }
+
+                GroupBox(label: Label("Updates", systemImage: "arrow.down.circle")) {
+                    HStack {
+                        Text(updater.currentVersionText).foregroundColor(.secondary)
+                        if updater.busy {
+                            ProgressView().controlSize(.small).padding(.leading, 6)
+                            Text(updater.status).font(.callout).foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button("Check for Updates") { updater.checkForUpdates() }
+                            .disabled(updater.busy)
                     }
                     .padding(6)
                 }

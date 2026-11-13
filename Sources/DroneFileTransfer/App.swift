@@ -17,6 +17,11 @@ struct DroneFileTransferApp: App {
             .environmentObject(settings)
             .frame(minWidth: 760, minHeight: 620)
         }
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates\u{2026}") { Updater.shared.checkForUpdates() }
+            }
+        }
     }
 }
 

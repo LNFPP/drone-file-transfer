@@ -41,7 +41,9 @@ enum Stage { case idle, scanning, needPaths, preview, copying, done }
 final class RunModel: ObservableObject {
     @Published var dronePath = ""
     @Published var csvs: [LoadedCSV] = []
-    @Published var stage: Stage = .idle
+    @Published var stage: Stage = .idle {
+        didSet { CopyState.inProgress = (stage == .scanning || stage == .copying) }
+    }
     @Published var status = ""
     @Published var progress = 0.0
     @Published var needs: [PathNeed] = []
