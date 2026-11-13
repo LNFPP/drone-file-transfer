@@ -3,3 +3,5 @@
 *.app
 *.zip
 .DS_Store
+*.dmg
+dmg/background.tiff

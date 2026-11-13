@@ -55,11 +55,24 @@ jobs:
           codesign --force --deep -s - "$APP"
           ditto -c -k --keepParent "$APP" DroneFileTransfer-mac.zip
 
+      # Drag-to-Applications installer (the zip above is what the in-app updater uses)
+      - name: Make the .dmg
+        run: |
+          python3 -m venv /tmp/dmgenv
+          /tmp/dmgenv/bin/pip install --quiet dmgbuild
+          tiffutil -cathidpicheck dmg/background.png dmg/background@2x.png -out dmg/background.tiff
+          /tmp/dmgenv/bin/dmgbuild -s dmg/settings.py \
+            -D app="Drone File Transfer.app" \
+            -D icon="Drone File Transfer.app/Contents/Resources/AppIcon.icns" \
+            -D background=dmg/background.tiff \
+            "Drone File Transfer" DroneFileTransfer-mac.dmg
+          hdiutil verify DroneFileTransfer-mac.dmg
+
       # Always-current download:
-      # https://github.com/LNFPP/drone-file-transfer/releases/latest/download/DroneFileTransfer-mac.zip
+      # https://github.com/LNFPP/drone-file-transfer/releases/latest/download/DroneFileTransfer-mac.dmg
       - name: Publish as the latest release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release delete build --yes --cleanup-tag || true
-          gh release create build DroneFileTransfer-mac.zip --title "Drone File Transfer for Mac" --notes "build=${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})" --latest
+          gh release create build DroneFileTransfer-mac.dmg DroneFileTransfer-mac.zip --title "Drone File Transfer for Mac" --notes "build=${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})" --latest
