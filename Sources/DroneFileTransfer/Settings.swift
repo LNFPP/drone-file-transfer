@@ -1,7 +1,8 @@
 import Foundation
 import AppKit
 
-/// A community or location and the folder its footage goes to.
+/// A location and the folder its footage goes to, or a community whose folder
+/// isn't found automatically (path = its main folder, the one with Drone and 360's inside).
 struct PlaceConfig: Codable, Identifiable, Hashable {
     var id = UUID()
     var name: String
@@ -15,7 +16,12 @@ final class AppSettings: ObservableObject {
     private let d = UserDefaults.standard
 
     @Published var places: [PlaceConfig] { didSet { save() } }
+    /// e.g. /Volumes/Drive/Video/Communities: each community's folder is found in here by name.
+    @Published var communitiesPath: String { didSet { save(); Folders.defaultStart = communitiesPath } }
+    @Published var droneSubfolder: String { didSet { save() } }
+    @Published var panoSubfolder: String { didSet { save() } }
     @Published var unsortedPath: String { didSet { save() } }
+    @Published var unmatched360Path: String { didSet { save() } }
     @Published var bufferMinutes: Int { didSet { save() } }
     @Published var dronePath: String { didSet { save() } }
     @Published var rememberDrone: Bool { didSet { save() } }
@@ -26,15 +32,24 @@ final class AppSettings: ObservableObject {
         } else {
             places = [PlaceConfig(name: "Schellville Event", path: "", alwaysAsk: true)]
         }
+        communitiesPath = d.string(forKey: "communitiesPath") ?? ""
+        droneSubfolder = d.string(forKey: "droneSubfolder") ?? "Drone"
+        panoSubfolder = d.string(forKey: "panoSubfolder") ?? "360's"
         unsortedPath = d.string(forKey: "unsortedPath") ?? ""
+        unmatched360Path = d.string(forKey: "unmatched360Path") ?? ""
         bufferMinutes = d.object(forKey: "bufferMinutes") as? Int ?? 5
         dronePath = d.string(forKey: "dronePath") ?? ""
         rememberDrone = d.object(forKey: "rememberDrone") as? Bool ?? true
+        Folders.defaultStart = communitiesPath
     }
 
     private func save() {
         if let data = try? JSONEncoder().encode(places) { d.set(data, forKey: "places") }
+        d.set(communitiesPath, forKey: "communitiesPath")
+        d.set(droneSubfolder, forKey: "droneSubfolder")
+        d.set(panoSubfolder, forKey: "panoSubfolder")
         d.set(unsortedPath, forKey: "unsortedPath")
+        d.set(unmatched360Path, forKey: "unmatched360Path")
         d.set(bufferMinutes, forKey: "bufferMinutes")
         d.set(rememberDrone ? dronePath : "", forKey: "dronePath")
         d.set(rememberDrone, forKey: "rememberDrone")
@@ -63,6 +78,9 @@ final class AppSettings: ObservableObject {
 // MARK: - Folder helpers shared by both tabs
 
 enum Folders {
+    /// Where Choose… opens when there's no folder yet: the Communities folder.
+    static var defaultStart = ""
+
     /// Finder "choose a folder" window (it has its own search box).
     static func choose(title: String, startAt: String = "") -> String? {
         let panel = NSOpenPanel()
@@ -72,7 +90,8 @@ enum Folders {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
-        if !startAt.isEmpty { panel.directoryURL = URL(fileURLWithPath: startAt) }
+        let start = isFolder(startAt) ? startAt : defaultStart
+        if isFolder(start) { panel.directoryURL = URL(fileURLWithPath: start) }
         return panel.runModal() == .OK ? panel.url?.path : nil
     }
 
@@ -90,6 +109,27 @@ enum Folders {
         guard let s = NSPasteboard.general.string(forType: .string) else { return nil }
         let p = clean(s)
         return p.isEmpty ? nil : p
+    }
+
+    /// Lowercase letters and numbers only, so "360's" = "360s" and "Walden " = "walden".
+    static func simple(_ s: String) -> String {
+        String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
+    }
+
+    /// Finds the folder inside `parent` that matches `name`, ignoring capitals, spaces and punctuation.
+    /// Exact match first; otherwise a single folder that starts with, then contains, the name.
+    static func findChild(named name: String, in parent: String) -> String? {
+        let want = simple(name)
+        guard !want.isEmpty, isFolder(parent),
+              let items = try? FileManager.default.contentsOfDirectory(atPath: parent) else { return nil }
+        let dirs = items.filter { !$0.hasPrefix(".") && isFolder((parent as NSString).appendingPathComponent($0)) }
+        let full = { (n: String) in (parent as NSString).appendingPathComponent(n) }
+        if let exact = dirs.first(where: { simple($0) == want }) { return full(exact) }
+        let starts = dirs.filter { simple($0).hasPrefix(want) }
+        if starts.count == 1 { return full(starts[0]) }
+        let contains = dirs.filter { simple($0).contains(want) }
+        if contains.count == 1 { return full(contains[0]) }
+        return nil
     }
 
     static func isFolder(_ path: String) -> Bool {

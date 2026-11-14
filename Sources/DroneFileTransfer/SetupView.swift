@@ -11,22 +11,43 @@ struct SetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Setup").font(.title.bold())
-                Text("Each community or location gets a folder. Footage goes into a dated folder inside it (e.g. 11.12.26/Photos, 11.12.26/Videos).")
-                    .foregroundColor(.secondary)
 
-                GroupBox(label: Label("Communities & locations", systemImage: "mappin.and.ellipse")) {
+                GroupBox(label: Label("Communities", systemImage: "house.and.flag")) {
                     VStack(alignment: .leading, spacing: 10) {
+                        Text("Pick your Communities folder (Drive \u{2192} Video \u{2192} Communities). Each community's folder is found inside it by name, then its subfolders below. Choose\u{2026} buttons open here.")
+                            .font(.callout).foregroundColor(.secondary)
+                        pathControls(path: $settings.communitiesPath, title: "Communities folder")
+                        HStack(spacing: 16) {
+                            HStack {
+                                Text("Drone files go in")
+                                TextField("Drone", text: $settings.droneSubfolder).textFieldStyle(.roundedBorder).frame(width: 110)
+                            }
+                            HStack {
+                                Text("360s go in")
+                                TextField("360's", text: $settings.panoSubfolder).textFieldStyle(.roundedBorder).frame(width: 110)
+                            }
+                        }
+                        Text("e.g. Communities/Walden/\(settings.droneSubfolder)/11.13.26/Photos and Communities/Walden/\(settings.panoSubfolder)/11.13.26/Walden_Lot12.jpg. Capital letters, spaces and apostrophes don't matter when matching.")
+                            .font(.caption).foregroundColor(.secondary)
+                    }
+                    .padding(6)
+                }
+
+                GroupBox(label: Label("Locations & exceptions", systemImage: "mappin.and.ellipse")) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Locations (Type = Location in the Flight Log, like Schellville Event) need a folder here, or Always ask. Communities are found automatically \u{2014} only add one here if its folder has a different name or lives somewhere else (pick its main folder, the one with \(settings.droneSubfolder) and \(settings.panoSubfolder) inside).")
+                            .font(.callout).foregroundColor(.secondary)
                         ForEach($settings.places) { $p in
                             placeRow($p)
                             Divider()
                         }
                         HStack {
-                            TextField("New community or location name", text: $newName)
+                            TextField("New location or community name", text: $newName)
                                 .textFieldStyle(.roundedBorder)
                                 .onSubmit(addPlace)
                             Button("Add", action: addPlace).disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
-                        Text("Names must match the names in your Lot Shots Flight Log (capital letters don't matter).")
+                        Text("Names must match the names in your Lot Shots CSVs (capital letters don't matter).")
                             .font(.caption).foregroundColor(.secondary)
                     }
                     .padding(6)
@@ -34,9 +55,18 @@ struct SetupView: View {
 
                 GroupBox(label: Label("Unsorted folder", systemImage: "questionmark.folder")) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Files shot outside every Start\u{2013}Stop time, and places you choose to Ignore, go here.")
+                        Text("Drone files shot outside every Start\u{2013}Stop time, and places you choose to Ignore, go here.")
                             .font(.callout).foregroundColor(.secondary)
                         pathControls(path: $settings.unsortedPath, title: "Unsorted folder")
+                    }
+                    .padding(6)
+                }
+
+                GroupBox(label: Label("Unmatched 360s folder", systemImage: "questionmark.folder")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("360s on the drone that no 360s CSV row claims go here, in a dated folder.")
+                            .font(.callout).foregroundColor(.secondary)
+                        pathControls(path: $settings.unmatched360Path, title: "Unmatched 360s folder")
                     }
                     .padding(6)
                 }
