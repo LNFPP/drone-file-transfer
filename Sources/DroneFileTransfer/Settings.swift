@@ -127,7 +127,7 @@ enum Folders {
 
     /// Lowercase letters and numbers only, so "360's" = "360s" and "Walden " = "walden".
     static func simple(_ s: String) -> String {
-        String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
+        String(s.lowercased().replacingOccurrences(of: "&", with: "and").unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
     }
 
     /// Finds the folder inside `parent` that matches `name`, ignoring capitals, spaces and punctuation.

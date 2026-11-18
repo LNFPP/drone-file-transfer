@@ -100,7 +100,7 @@ struct SetupView: View {
                 ColorSection("Xmas-Awards", icon: "gift", color: SectionColor.blue, key: "setup.awards") {
                     GroupBox(label: Label("Main folder", systemImage: "folder")) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("The folder that holds this year's award folders. Each clip goes to the folder named like its Award Name (or, failing that, its Winner), up to 3 levels down. If that folder has a folder named like the Speaker inside, the clip goes there instead.")
+                            Text("Clips go to Main folder \u{2192} <Award Name> \u{2192} <Winner> \u{2192} <Speaker>, each folder found by name from the CSV (capitals, spaces and punctuation don't matter). If one isn't found, you'll be asked to choose a folder or skip those clips.")
                                 .font(.callout).foregroundColor(.secondary)
                             pathControls(path: $settings.awardsMainPath, title: "Xmas-Awards main folder")
                         }

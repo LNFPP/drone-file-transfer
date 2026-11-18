@@ -12,8 +12,8 @@ struct AwardRow: Identifiable, Hashable {
     let start: Date
     let stop: Date
 
-    /// Rows for the same award + winner share a folder.
-    var folderKey: String { AppSettings.key(award) + "|" + AppSettings.key(winner) }
+    /// Rows with the same award + winner + speaker share a folder.
+    var folderKey: String { [award, winner, speaker].map(AppSettings.key).joined(separator: "|") }
 }
 
 enum AwardsLog {
@@ -168,61 +168,21 @@ enum AwardsMatcher {
     }
 }
 
-// MARK: - Finding each award's folder
+// MARK: - Finding each clip's folder
 
 enum AwardFolders {
-    /// All folders up to 3 levels under the main folder.
-    static func list(_ main: String, depth: Int = 3) -> [String] {
-        var out: [String] = []
-        var level = [main]
-        for _ in 0..<depth {
-            var next: [String] = []
-            for dir in level {
-                guard let items = try? FileManager.default.contentsOfDirectory(atPath: dir) else { continue }
-                for n in items where !n.hasPrefix(".") {
-                    let p = (dir as NSString).appendingPathComponent(n)
-                    if Folders.isFolder(p) { next.append(p) }
-                }
+    /// Main folder -> <Award Name> -> <Winner> -> <Speaker>, each found by name
+    /// (capitals, spaces and punctuation ignored; a folder with extra words also counts if it's the only one).
+    /// Returns the Speaker folder, or what was missing.
+    static func resolve(award: String, winner: String, speaker: String, main: String) -> (path: String?, missing: String) {
+        var here = main
+        for (label, name) in [("Award", award), ("Winner", winner), ("Speaker", speaker)] {
+            if name.trimmingCharacters(in: .whitespaces).isEmpty { continue }   // blank in the CSV: skip that level
+            guard let next = Folders.findChild(named: name, in: here) else {
+                return (nil, "No \(label) folder named \u{201C}\(name)\u{201D} in \(here)")
             }
-            out += next
-            level = next
+            here = next
         }
-        return out
-    }
-
-    /// The folder for an award: named like the award (e.g. "Field First" or "Field First - Phil Doppel"),
-    /// or failing that, named like the winner. Inside it, a folder named like the speaker is used if there is one.
-    /// Returns nil when nothing (or more than one folder) fits, so the app can ask.
-    static func find(award: String, winner: String, speaker: String, in folders: [String]) -> String? {
-        let a = Folders.simple(award), w = Folders.simple(winner)
-        func name(_ p: String) -> String { Folders.simple((p as NSString).lastPathComponent) }
-        func pick(_ list: [String]) -> String? {
-            guard !list.isEmpty else { return nil }
-            if list.count == 1 { return list[0] }
-            // Prefer the one that also names the winner, then the shallowest.
-            if !w.isEmpty {
-                let both = list.filter { name($0).contains(w) }
-                if both.count == 1 { return both[0] }
-            }
-            let depths = list.map { $0.components(separatedBy: "/").count }
-            let top = list.enumerated().filter { depths[$0.offset] == depths.min()! }.map { $0.element }
-            return top.count == 1 ? top[0] : nil
-        }
-        var awardFolder: String?
-        if !a.isEmpty {
-            awardFolder = pick(folders.filter { name($0) == a }) ?? pick(folders.filter { name($0).contains(a) })
-        }
-        if awardFolder == nil && !w.isEmpty {
-            awardFolder = pick(folders.filter { name($0) == w }) ?? pick(folders.filter { name($0).contains(w) })
-        }
-        guard let base = awardFolder else { return nil }
-        return withSpeaker(base, speaker)
-    }
-
-    /// Uses a speaker folder inside `base` if one exists.
-    static func withSpeaker(_ base: String, _ speaker: String) -> String {
-        guard !speaker.isEmpty, let s = Folders.findChild(named: speaker, in: base),
-              Folders.simple((s as NSString).lastPathComponent).hasPrefix(Folders.simple(speaker)) else { return base }
-        return s
+        return (here, "")
     }
 }

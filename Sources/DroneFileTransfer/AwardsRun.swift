@@ -13,6 +13,8 @@ struct AwardNeed: Identifiable {
     let key: String            // AwardRow.folderKey
     let award: String
     let winner: String
+    let speaker: String
+    let detail: String
     let clipCount: Int
     var path = ""
     var skip = false
@@ -93,24 +95,26 @@ final class AwardsModel: ObservableObject {
         }
     }
 
-    /// Folder for one row: chosen this run, else found under the main folder.
-    private func folder(for r: AwardRow, _ all: [String]) -> String? {
-        if let c = chosen[r.folderKey] { return AwardFolders.withSpeaker(c, r.speaker) }
-        return AwardFolders.find(award: r.award, winner: r.winner, speaker: r.speaker, in: all)
+    /// Folder for one row: chosen this run, else Main/<Award>/<Winner>/<Speaker>.
+    private func folder(for r: AwardRow, _ main: String) -> (path: String?, missing: String) {
+        if let c = chosen[r.folderKey] { return (c, "") }
+        return AwardFolders.resolve(award: r.award, winner: r.winner, speaker: r.speaker, main: main)
     }
 
     private func collectNeeds(settings: AppSettings) {
-        let all = AwardFolders.list(settings.awardsMainPath)
+        let main = settings.awardsMainPath
         var list: [AwardNeed] = []
         var seen = Set<String>()
-        for r in rows where !(byRow[r.id] ?? []).isEmpty && !skipped.contains(r.folderKey) {
-            guard folder(for: r, all) == nil, !seen.contains(r.folderKey) else { continue }
+        for r in rows where !(byRow[r.id] ?? []).isEmpty && !skipped.contains(r.folderKey) && !seen.contains(r.folderKey) {
+            let f = folder(for: r, main)
+            guard f.path == nil else { continue }
             seen.insert(r.folderKey)
             let n = rows.filter { $0.folderKey == r.folderKey }.reduce(0) { $0 + (byRow[$1.id]?.count ?? 0) }
-            list.append(AwardNeed(key: r.folderKey, award: r.award, winner: r.winner, clipCount: n))
+            list.append(AwardNeed(key: r.folderKey, award: r.award, winner: r.winner, speaker: r.speaker,
+                                  detail: f.missing, clipCount: n))
         }
         needs = list
-        if list.isEmpty { buildPlan(all) } else { stage = .needPaths }
+        if list.isEmpty { buildPlan(main) } else { stage = .needPaths }
     }
 
     var needsComplete: Bool { needs.allSatisfy { $0.skip || Folders.isFolder(Folders.clean($0.path)) } }
@@ -122,7 +126,7 @@ final class AwardsModel: ObservableObject {
         collectNeeds(settings: settings)
     }
 
-    private func buildPlan(_ all: [String]) {
+    private func buildPlan(_ main: String) {
         var byFolder: [String: AwardGroup] = [:]
         var rep = AwardsReport()
         rep.leftAlone = leftAlone
@@ -133,7 +137,7 @@ final class AwardsModel: ObservableObject {
                 rep.skipped.append("\(r.award) \u{2014} \(r.speaker): \(clips.count) clip\(clips.count == 1 ? "" : "s")")
                 continue
             }
-            guard let f = folder(for: r, all) else { continue }
+            guard let f = folder(for: r, main).path else { continue }
             var g = byFolder[f] ?? AwardGroup(award: r.award, winner: r.winner, speaker: r.speaker,
                                               folder: URL(fileURLWithPath: f), clips: [])
             g.clips += clips
@@ -276,24 +280,25 @@ struct AwardsRunSection: View {
     private var needsView: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Choose folders before starting").font(.title2.bold())
-            Text("These awards have clips, but no matching folder was found in \(settings.awardsMainPath).")
+            Text("These clips' folders weren't found (Main \u{2192} Award \u{2192} Winner \u{2192} Speaker). Choose the folder for them, or skip them.")
                 .foregroundColor(.secondary)
             ForEach($model.needs) { $n in
                 GroupBox {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text(n.award).font(.headline)
-                            if !n.winner.isEmpty { Text(n.winner).foregroundColor(.secondary) }
+                            Text([n.winner, n.speaker].filter { !$0.isEmpty }.joined(separator: " \u{2192} ")).foregroundColor(.secondary)
                             Text("\(n.clipCount) clip\(n.clipCount == 1 ? "" : "s")").foregroundColor(.secondary)
                             Spacer()
                             Toggle("Skip (don't copy)", isOn: $n.skip)
                         }
+                        Text(n.detail).font(.caption).foregroundColor(.orange).textSelection(.enabled)
                         if !n.skip {
                             HStack {
                                 TextField("Paste a folder path, or Choose\u{2026}", text: $n.path)
                                     .textFieldStyle(.roundedBorder)
                                 Button("Choose\u{2026}") {
-                                    if let p = Folders.choose(title: "Folder for \(n.award)",
+                                    if let p = Folders.choose(title: "Folder for \(n.award) \u{2192} \(n.speaker)",
                                                               startAt: n.path.isEmpty ? settings.awardsMainPath : n.path) { n.path = p }
                                 }
                             }
@@ -326,7 +331,7 @@ struct AwardsRunSection: View {
                         HStack {
                             Image(systemName: "gift.fill").foregroundColor(SectionColor.blue)
                             Text(g.award).font(.headline)
-                            if !g.winner.isEmpty { Text(g.winner).foregroundColor(.secondary) }
+                            Text([g.winner, g.speaker].filter { !$0.isEmpty }.joined(separator: " \u{2192} ")).foregroundColor(.secondary)
                             Spacer()
                             Text("\(g.clips.count) clip\(g.clips.count == 1 ? "" : "s")")
                         }
