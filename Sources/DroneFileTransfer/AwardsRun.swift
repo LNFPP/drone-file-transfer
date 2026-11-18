@@ -98,7 +98,8 @@ final class AwardsModel: ObservableObject {
     /// Folder for one row: chosen this run, else Main/<Award>/<Winner>/<Speaker>.
     private func folder(for r: AwardRow, _ main: String) -> (path: String?, missing: String) {
         if let c = chosen[r.folderKey] { return (c, "") }
-        return AwardFolders.resolve(award: r.award, winner: r.winner, speaker: r.speaker, main: main)
+        let f = AwardFolders.resolve(values: r.values, main: main)
+        return (f.path, f.missing)
     }
 
     private func collectNeeds(settings: AppSettings) {
@@ -288,7 +289,7 @@ struct AwardsRunSection: View {
     private var needsView: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Choose folders before starting").font(.title2.bold())
-            Text("These clips' folders weren't found (Main \u{2192} Award \u{2192} Winner \u{2192} Speaker). Choose the folder for them, or skip them.")
+            Text("No folder matching these clips' CSV names was found in the main folder. Choose the folder for them, or skip them.")
                 .foregroundColor(.secondary)
             ForEach($model.needs) { $n in
                 GroupBox {
@@ -332,7 +333,7 @@ struct AwardsRunSection: View {
     private var preview: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Ready to copy").font(.title2.bold())
-            Text("Only clips that fall within a CSV row's Start\u{2013}Stop time are copied, with their camera names. Nothing on the card is moved or deleted.")
+            Text("Only clips that fall within a CSV row's Start\u{2013}Stop time are copied, with their camera names. Check each folder path below \u{2014} it's found by matching the CSV names to your folders. Nothing on the card is moved or deleted.")
                 .foregroundColor(.secondary)
             ForEach(model.groups) { g in
                 GroupBox {

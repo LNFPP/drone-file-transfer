@@ -97,7 +97,7 @@ struct SetupView: View {
                 ColorSection("Xmas-Awards", icon: "gift", color: SectionColor.blue, key: "setup.awards") {
                     GroupBox(label: Label("Main folder", systemImage: "folder")) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Clips go to Main folder \u{2192} <Award Name> \u{2192} <Winner> \u{2192} <Speaker>, each folder found by name from the CSV (capitals, spaces and punctuation don't matter). If one isn't found, you'll be asked to choose a folder or skip those clips.")
+                            Text("Starting in this folder, the app looks for a folder named like any of the clip's CSV values (Speaker, Award Name, Winner\u{2026}), goes into it, and keeps going down as long as another folder matches. The clip goes in the deepest folder it reaches. Capitals, spaces and punctuation don't matter, and & = and. If nothing matches, you'll be asked to choose a folder or skip.")
                                 .font(.callout).foregroundColor(.secondary)
                             pathControls(path: $settings.awardsMainPath, title: "Xmas-Awards main folder")
                         }

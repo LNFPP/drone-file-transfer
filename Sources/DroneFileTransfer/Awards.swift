@@ -11,9 +11,11 @@ struct AwardRow: Identifiable, Hashable {
     let date: String       // "2026-11-18"
     let start: Date
     let stop: Date
+    /// Every column except the Start/Stop times, in CSV order: used to find the folders.
+    let values: [String]
 
-    /// Rows with the same award + winner + speaker share a folder.
-    var folderKey: String { [award, winner, speaker].map(AppSettings.key).joined(separator: "|") }
+    /// Rows with the same values share a folder.
+    var folderKey: String { values.map(AppSettings.key).joined(separator: "|") }
 }
 
 enum AwardsLog {
@@ -34,8 +36,10 @@ enum AwardsLog {
             let stop = FlightLog.parseDate(get(iStop)) ?? start
             var date = get(iDate)
             if date.isEmpty { date = String(get(iStart).prefix(10)) }
+            let values = header.indices.filter { !header[$0].hasPrefix("start") && !header[$0].hasPrefix("stop") }
+                .map { get($0) }.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
             out.append(AwardRow(speaker: get(iSpeaker), award: get(iAward), winner: get(iWinner),
-                                date: date, start: start, stop: max(stop, start)))
+                                date: date, start: start, stop: max(stop, start), values: values))
         }
         return out
     }
@@ -171,18 +175,36 @@ enum AwardsMatcher {
 // MARK: - Finding each clip's folder
 
 enum AwardFolders {
-    /// Main folder -> <Award Name> -> <Winner> -> <Speaker>, each found by name
-    /// (capitals, spaces and punctuation ignored; a folder with extra words also counts if it's the only one).
-    /// Returns the Speaker folder, or what was missing.
-    static func resolve(award: String, winner: String, speaker: String, main: String) -> (path: String?, missing: String) {
+    /// Starts at the main folder. At each level, looks for a folder named like any of the row's
+    /// CSV values not used yet (Speaker, Award Name, Winner, ... in any order), goes into it, and repeats
+    /// until no folder matches. The clip goes in the deepest folder reached.
+    /// Exact names win over partial ones. Returns nil if not even the first level matched.
+    static func resolve(values: [String], main: String) -> (path: String?, matched: [String], missing: String) {
         var here = main
-        for (label, name) in [("Award", award), ("Winner", winner), ("Speaker", speaker)] {
-            if name.trimmingCharacters(in: .whitespaces).isEmpty { continue }   // blank in the CSV: skip that level
-            guard let next = Folders.findChild(named: name, in: here) else {
-                return (nil, "No \(label) folder named \u{201C}\(name)\u{201D} in \(here)")
+        var left = values
+        var matched: [String] = []
+        while !left.isEmpty {
+            guard let items = try? FileManager.default.contentsOfDirectory(atPath: here) else { break }
+            let dirs = items.filter { !$0.hasPrefix(".") && Folders.isFolder((here as NSString).appendingPathComponent($0)) }
+            var hit: (index: Int, folder: String)?
+            // 1. exact name match for any value
+            for (i, v) in left.enumerated() {
+                if let d = dirs.first(where: { Folders.simple($0) == Folders.simple(v) }) { hit = (i, d); break }
             }
-            here = next
+            // 2. otherwise a single folder that starts with / contains a value
+            if hit == nil {
+                for (i, v) in left.enumerated() {
+                    if let p = Folders.findChild(named: v, in: here) { hit = (i, (p as NSString).lastPathComponent); break }
+                }
+            }
+            guard let h = hit else { break }
+            here = (here as NSString).appendingPathComponent(h.folder)
+            matched.append(h.folder)
+            left.remove(at: h.index)
         }
-        return (here, "")
+        if matched.isEmpty {
+            return (nil, [], "No folder in \(main) is named like any of: \(values.joined(separator: ", "))")
+        }
+        return (here, matched, "")
     }
 }
