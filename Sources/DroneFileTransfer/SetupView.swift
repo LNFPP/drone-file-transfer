@@ -12,6 +12,8 @@ struct SetupView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Setup").font(.title.bold())
 
+                ColorSection("Drone", icon: "airplane", color: SectionColor.drone, key: "setup.drone") {
+
                 GroupBox(label: Label("Communities", systemImage: "house.and.flag")) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Pick your Communities folder (Drive \u{2192} Video \u{2192} Communities). Each community's folder is found inside it by name, then its subfolders below. Choose\u{2026} buttons open here.")
@@ -92,6 +94,10 @@ struct SetupView: View {
                     .padding(6)
                 }
 
+                if let m = message { Text(m).foregroundColor(.orange) }
+                }
+                // More drop-down sections go here.
+
                 GroupBox(label: Label("Updates", systemImage: "arrow.down.circle")) {
                     HStack {
                         Text(updater.currentVersionText).foregroundColor(.secondary)
@@ -105,8 +111,6 @@ struct SetupView: View {
                     }
                     .padding(6)
                 }
-
-                if let m = message { Text(m).foregroundColor(.orange) }
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)

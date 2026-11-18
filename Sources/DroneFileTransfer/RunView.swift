@@ -9,16 +9,19 @@ struct RunView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                switch model.stage {
-                case .idle, .scanning: setupSection
-                case .needPaths: needsSection
-                case .preview: previewSection
-                case .copying: copyingSection
-                case .done: doneSection
+                ColorSection("Drone", icon: "airplane", color: SectionColor.drone, key: "run.drone") {
+                    switch model.stage {
+                    case .idle, .scanning: setupSection
+                    case .needPaths: needsSection
+                    case .preview: previewSection
+                    case .copying: copyingSection
+                    case .done: doneSection
+                    }
+                    if let e = model.error {
+                        Text(e).foregroundColor(.red).textSelection(.enabled)
+                    }
                 }
-                if let e = model.error {
-                    Text(e).foregroundColor(.red).textSelection(.enabled)
-                }
+                // More drop-down sections go here.
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
