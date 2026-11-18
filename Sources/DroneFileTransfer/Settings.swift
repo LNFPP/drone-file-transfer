@@ -119,6 +119,12 @@ enum Folders {
         return (s as NSString).expandingTildeInPath
     }
 
+    /// Reads a folder path from the clipboard. Returns the path, or a message saying what's wrong.
+    static func pastedFolder() -> (path: String?, problem: String?) {
+        guard let p = pasteboardPath() else { return (nil, "Nothing to paste \u{2014} copy a folder path first.") }
+        return isFolder(p) ? (p, nil) : (nil, "That folder wasn't found: \(p)")
+    }
+
     static func pasteboardPath() -> String? {
         guard let s = NSPasteboard.general.string(forType: .string) else { return nil }
         let p = clean(s)

@@ -52,6 +52,14 @@ struct RunView: View {
                                 if settings.rememberDrone { settings.dronePath = p }
                             }
                         }
+                        Button("Paste path") {
+                            let r = Folders.pastedFolder()
+                            if let p = r.path {
+                                model.dronePath = p
+                                model.error = nil
+                                if settings.rememberDrone { settings.dronePath = p }
+                            } else { model.error = r.problem }
+                        }
                     }
                     Toggle("Remember this path", isOn: $settings.rememberDrone)
                         .onChange(of: settings.rememberDrone) { on in
@@ -156,6 +164,7 @@ struct RunView: View {
                                 Button("Choose\u{2026}") {
                                     if let p = Folders.choose(title: chooseTitle(n), startAt: n.path) { n.path = p }
                                 }
+                                Button("Paste") { if let p = Folders.pasteboardPath() { n.path = p } }
                             }
                             if !n.path.isEmpty && !Folders.isFolder(Folders.clean(n.path)) {
                                 Text("Folder not found").font(.caption).foregroundColor(.red)

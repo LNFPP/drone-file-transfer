@@ -228,6 +228,14 @@ struct AwardsRunSection: View {
                                 if settings.rememberAwardsCamera { settings.awardsCameraPath = p }
                             }
                         }
+                        Button("Paste path") {
+                            let r = Folders.pastedFolder()
+                            if let p = r.path {
+                                model.cameraPath = p
+                                model.error = nil
+                                if settings.rememberAwardsCamera { settings.awardsCameraPath = p }
+                            } else { model.error = r.problem }
+                        }
                     }
                     Toggle("Remember this path", isOn: $settings.rememberAwardsCamera)
                         .onChange(of: settings.rememberAwardsCamera) { on in
@@ -301,6 +309,7 @@ struct AwardsRunSection: View {
                                     if let p = Folders.choose(title: "Folder for \(n.award) \u{2192} \(n.speaker)",
                                                               startAt: n.path.isEmpty ? settings.awardsMainPath : n.path) { n.path = p }
                                 }
+                                Button("Paste") { if let p = Folders.pasteboardPath() { n.path = p } }
                             }
                             if !n.path.isEmpty && !Folders.isFolder(Folders.clean(n.path)) {
                                 Text("Folder not found").font(.caption).foregroundColor(.red)

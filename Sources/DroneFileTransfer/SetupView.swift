@@ -84,12 +84,9 @@ struct SetupView: View {
                 }
 
                 GroupBox(label: Label("Remembered drone path", systemImage: "externaldrive")) {
-                    HStack {
-                        Text(settings.dronePath.isEmpty ? "None" : settings.dronePath)
-                            .foregroundColor(settings.dronePath.isEmpty ? .secondary : .primary)
-                            .lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        Button("Reset") { settings.dronePath = "" }.disabled(settings.dronePath.isEmpty)
+                    VStack(alignment: .leading, spacing: 6) {
+                        pathControls(path: $settings.dronePath, title: "Choose the drone's folder (e.g. DCIM)", startAt: "/Volumes")
+                        Text("Used on the Run tab when \u{201C}Remember this path\u{201D} is on.").font(.caption).foregroundColor(.secondary)
                     }
                     .padding(6)
                 }
@@ -118,12 +115,9 @@ struct SetupView: View {
                     }
 
                     GroupBox(label: Label("Remembered camera path", systemImage: "video")) {
-                        HStack {
-                            Text(settings.awardsCameraPath.isEmpty ? "None" : settings.awardsCameraPath)
-                                .foregroundColor(settings.awardsCameraPath.isEmpty ? .secondary : .primary)
-                                .lineLimit(1).truncationMode(.middle)
-                            Spacer()
-                            Button("Reset") { settings.awardsCameraPath = "" }.disabled(settings.awardsCameraPath.isEmpty)
+                        VStack(alignment: .leading, spacing: 6) {
+                            pathControls(path: $settings.awardsCameraPath, title: "Choose the camera card or clips folder", startAt: "/Volumes")
+                            Text("Used on the Run tab when \u{201C}Remember this path\u{201D} is on.").font(.caption).foregroundColor(.secondary)
                         }
                         .padding(6)
                     }
@@ -185,7 +179,7 @@ struct SetupView: View {
 
     /// Path display + Choose… (Finder, searchable) + Paste path + Reset.
     @ViewBuilder
-    private func pathControls(path: Binding<String>, title: String) -> some View {
+    private func pathControls(path: Binding<String>, title: String, startAt: String = "") -> some View {
         HStack {
             Image(systemName: Folders.isFolder(path.wrappedValue) ? "folder.fill" : "folder.badge.questionmark")
                 .foregroundColor(Folders.isFolder(path.wrappedValue) ? .accentColor : .secondary)
@@ -195,7 +189,7 @@ struct SetupView: View {
                 .textSelection(.enabled)
             Spacer()
             Button("Choose\u{2026}") {
-                if let c = Folders.choose(title: title, startAt: path.wrappedValue) { path.wrappedValue = c }
+                if let c = Folders.choose(title: title, startAt: path.wrappedValue.isEmpty ? startAt : path.wrappedValue) { path.wrappedValue = c }
             }
             Button("Paste path") {
                 guard let c = Folders.pasteboardPath() else { message = "Nothing to paste \u{2014} copy a folder path first."; return }
