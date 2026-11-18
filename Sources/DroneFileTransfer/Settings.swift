@@ -16,7 +16,8 @@ final class AppSettings: ObservableObject {
     private let d = UserDefaults.standard
 
     @Published var places: [PlaceConfig] { didSet { save() } }
-    /// e.g. /Volumes/Drive/Video/Communities: each community's folder is found in here by name.
+    /// Drone main folder, e.g. /Volumes/Drive/Video (or .../Video/Communities): each place's folder
+    /// is found under it by matching the CSV's Type and Place names, level by level.
     @Published var communitiesPath: String { didSet { save(); Folders.defaultStart = communitiesPath } }
     @Published var droneSubfolder: String { didSet { save() } }
     @Published var panoSubfolder: String { didSet { save() } }
@@ -150,6 +151,32 @@ enum Folders {
         let contains = dirs.filter { simple($0).contains(want) }
         if contains.count == 1 { return full(contains[0]) }
         return nil
+    }
+
+    /// Starts at `main`. At each level, looks for a folder named like any of `values` not used yet
+    /// (any order), goes into it, and repeats until nothing matches. Exact names win over partial ones.
+    /// Returns the deepest folder reached and which values matched.
+    static func descend(_ values: [String], from main: String) -> (path: String, matched: [String]) {
+        var here = main
+        var left = values.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        var matched: [String] = []
+        while !left.isEmpty {
+            guard let items = try? FileManager.default.contentsOfDirectory(atPath: here) else { break }
+            let dirs = items.filter { !$0.hasPrefix(".") && isFolder((here as NSString).appendingPathComponent($0)) }
+            var hit: (index: Int, folder: String)?
+            for (i, v) in left.enumerated() {
+                if let d = dirs.first(where: { simple($0) == simple(v) }) { hit = (i, d); break }
+            }
+            if hit == nil {
+                for (i, v) in left.enumerated() {
+                    if let p = findChild(named: v, in: here) { hit = (i, (p as NSString).lastPathComponent); break }
+                }
+            }
+            guard let h = hit else { break }
+            here = (here as NSString).appendingPathComponent(h.folder)
+            matched.append(left.remove(at: h.index))
+        }
+        return (here, matched)
     }
 
     static func isFolder(_ path: String) -> Bool {

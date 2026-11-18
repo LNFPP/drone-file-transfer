@@ -180,31 +180,10 @@ enum AwardFolders {
     /// until no folder matches. The clip goes in the deepest folder reached.
     /// Exact names win over partial ones. Returns nil if not even the first level matched.
     static func resolve(values: [String], main: String) -> (path: String?, matched: [String], missing: String) {
-        var here = main
-        var left = values
-        var matched: [String] = []
-        while !left.isEmpty {
-            guard let items = try? FileManager.default.contentsOfDirectory(atPath: here) else { break }
-            let dirs = items.filter { !$0.hasPrefix(".") && Folders.isFolder((here as NSString).appendingPathComponent($0)) }
-            var hit: (index: Int, folder: String)?
-            // 1. exact name match for any value
-            for (i, v) in left.enumerated() {
-                if let d = dirs.first(where: { Folders.simple($0) == Folders.simple(v) }) { hit = (i, d); break }
-            }
-            // 2. otherwise a single folder that starts with / contains a value
-            if hit == nil {
-                for (i, v) in left.enumerated() {
-                    if let p = Folders.findChild(named: v, in: here) { hit = (i, (p as NSString).lastPathComponent); break }
-                }
-            }
-            guard let h = hit else { break }
-            here = (here as NSString).appendingPathComponent(h.folder)
-            matched.append(h.folder)
-            left.remove(at: h.index)
-        }
-        if matched.isEmpty {
+        let d = Folders.descend(values, from: main)
+        if d.matched.isEmpty {
             return (nil, [], "No folder in \(main) is named like any of: \(values.joined(separator: ", "))")
         }
-        return (here, matched, "")
+        return (d.path, d.matched, "")
     }
 }

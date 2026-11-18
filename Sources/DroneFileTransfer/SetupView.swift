@@ -14,11 +14,11 @@ struct SetupView: View {
 
                 ColorSection("Drone", icon: "airplane", color: SectionColor.drone, key: "setup.drone") {
 
-                GroupBox(label: Label("Communities", systemImage: "house.and.flag")) {
+                GroupBox(label: Label("Main folder", systemImage: "house.and.flag")) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Pick your Communities folder (Drive \u{2192} Video \u{2192} Communities). Each community's folder is found inside it by name, then its subfolders below. Choose\u{2026} buttons open here.")
+                        Text("Pick the folder your places live under, e.g. Drive \u{2192} Video. Starting here, the app goes down through folders named like the CSV's Type and Place, in any order (Video \u{2192} Communities \u{2192} Walden, Video \u{2192} Locations \u{2192} Schellville Event). Picking the Communities folder itself also works. Choose\u{2026} buttons open here.")
                             .font(.callout).foregroundColor(.secondary)
-                        pathControls(path: $settings.communitiesPath, title: "Communities folder")
+                        pathControls(path: $settings.communitiesPath, title: "Drone main folder")
                         HStack(spacing: 16) {
                             HStack {
                                 Text("Drone files go in")
@@ -37,7 +37,7 @@ struct SetupView: View {
 
                 GroupBox(label: Label("Locations & exceptions", systemImage: "mappin.and.ellipse")) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Locations (Type = Location in the Flight Log, like Schellville Event) need a folder here, or Always ask. Communities are found automatically \u{2014} only add one here if its folder has a different name or lives somewhere else (pick its main folder, the one with \(settings.droneSubfolder) and \(settings.panoSubfolder) inside).")
+                        Text("Communities and locations are found automatically under the main folder. Add one here only to set Always ask (like Schellville Event), or if its folder has a different name or lives somewhere else.")
                             .font(.callout).foregroundColor(.secondary)
                         ForEach($settings.places) { $p in
                             placeRow($p)

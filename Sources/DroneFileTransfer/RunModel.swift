@@ -176,7 +176,15 @@ final class RunModel: ObservableObject {
             if cfg.alwaysAsk { return nil }
             if !cfg.path.isEmpty { return Folders.isFolder(cfg.path) ? cfg.path : nil }
         }
-        return Folders.findChild(named: name, in: settings.communitiesPath)
+        return placeFolder(name, type: "Community", settings)
+    }
+
+    /// Goes down from the main folder matching the Type and Place names (any order, e.g.
+    /// Video -> Communities -> Walden). The place name itself has to match.
+    private func placeFolder(_ name: String, type: String, _ settings: AppSettings) -> String? {
+        guard Folders.isFolder(settings.communitiesPath) else { return nil }
+        let d = Folders.descend([type, name], from: settings.communitiesPath)
+        return d.matched.contains(name) ? d.path : nil
     }
 
     private func subFolder(_ name: String, pano: Bool, _ settings: AppSettings) -> String? {
@@ -189,8 +197,13 @@ final class RunModel: ObservableObject {
     private func locationFolder(_ name: String, _ settings: AppSettings) -> String? {
         let k = AppSettings.key(name)
         if let o = locationDir[k] { return o }
-        guard let cfg = settings.place(named: name), !cfg.alwaysAsk, Folders.isFolder(cfg.path) else { return nil }
-        return cfg.path
+        if let cfg = settings.place(named: name) {
+            if cfg.alwaysAsk { return nil }
+            if !cfg.path.isEmpty { return Folders.isFolder(cfg.path) ? cfg.path : nil }
+        }
+        // Found automatically: use its Drone subfolder if it has one, else the location folder itself.
+        guard let f = placeFolder(name, type: "Location", settings) else { return nil }
+        return Folders.findChild(named: settings.droneSubfolder, in: f) ?? f
     }
 
     // MARK: Ask about anything missing
@@ -235,10 +248,11 @@ final class RunModel: ObservableObject {
 
             guard let cf = communityFolder(name, settings) else {
                 let detail = alwaysAsk ? "Set to always ask. Choose its main folder (the one with \(settings.droneSubfolder) and \(settings.panoSubfolder) inside)."
-                    : canCreateCommunity ? "No folder called \(name) in \(settings.communitiesPath)."
-                    : "Set your Communities folder in Setup, or choose this community's main folder."
+                    : canCreateCommunity ? "No folder named \(name) was found under \(settings.communitiesPath)."
+                    : "Set the Drone main folder in Setup, or choose this community's folder."
                 list.append(PathNeed(kind: .community, place: name, title: "\(name) \u{2014} \(what)", detail: detail,
-                                     createPath: canCreateCommunity && !alwaysAsk ? (settings.communitiesPath as NSString).appendingPathComponent(name) : nil,
+                                     createPath: canCreateCommunity && !alwaysAsk
+                                        ? (Folders.descend(["Community"], from: settings.communitiesPath).path as NSString).appendingPathComponent(name) : nil,
                                      choice: .choose, saveForNextTime: !alwaysAsk))
                 continue
             }
@@ -258,7 +272,7 @@ final class RunModel: ObservableObject {
         for v in locCount.values.sorted(by: { $0.name < $1.name }) where locationFolder(v.name, settings) == nil {
             let alwaysAsk = settings.place(named: v.name)?.alwaysAsk == true
             list.append(PathNeed(kind: .location, place: v.name, title: "\(v.name) \u{2014} \(plural(v.n, "drone file"))",
-                                 detail: alwaysAsk ? "Set to always ask." : "This location doesn't have a folder yet.",
+                                 detail: alwaysAsk ? "Set to always ask." : "No folder named \(v.name) was found under \(settings.communitiesPath).",
                                  createPath: nil, choice: .choose, saveForNextTime: !alwaysAsk))
         }
         if unsortedCount > 0 && !Folders.isFolder(settings.unsortedPath) {
