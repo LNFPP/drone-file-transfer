@@ -21,6 +21,9 @@ struct RunView: View {
                         Text(e).foregroundColor(.red).textSelection(.enabled)
                     }
                 }
+                ColorSection("Xmas-Awards", icon: "gift", color: SectionColor.blue, key: "run.awards") {
+                    AwardsRunSection()
+                }
                 // More drop-down sections go here.
             }
             .padding(24)

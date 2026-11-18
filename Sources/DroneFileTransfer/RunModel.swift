@@ -106,6 +106,7 @@ final class RunModel: ObservableObject {
                 switch try CSVFile.kind(u) {
                 case .flightLog: csvs.append(LoadedCSV(url: u, sessions: try FlightLog.load(u)))
                 case .threeSixty: panoCSVs.append(Loaded360CSV(url: u, rows: try ThreeSixtyLog.load(u)))
+                case .awards: self.error = "\(u.lastPathComponent) is a Christmas Awards CSV \u{2014} drop it in the Xmas-Awards section."
                 }
             } catch {
                 self.error = error.localizedDescription

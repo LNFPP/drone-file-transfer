@@ -96,6 +96,38 @@ struct SetupView: View {
 
                 if let m = message { Text(m).foregroundColor(.orange) }
                 }
+
+                ColorSection("Xmas-Awards", icon: "gift", color: SectionColor.blue, key: "setup.awards") {
+                    GroupBox(label: Label("Main folder", systemImage: "folder")) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("The folder that holds this year's award folders. Each clip goes to the folder named like its Award Name (or, failing that, its Winner), up to 3 levels down. If that folder has a folder named like the Speaker inside, the clip goes there instead.")
+                                .font(.callout).foregroundColor(.secondary)
+                            pathControls(path: $settings.awardsMainPath, title: "Xmas-Awards main folder")
+                        }
+                        .padding(6)
+                    }
+
+                    GroupBox(label: Label("Clock tolerance", systemImage: "clock")) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Stepper("\(settings.awardsTolerance) seconds before Start and after Stop",
+                                    value: $settings.awardsTolerance, in: 0...300, step: 5)
+                            Text("Allows for the camera's clock and the phone's clock being slightly different. A clip goes to the row whose Start\u{2013}Stop time it overlaps the most. Clips outside every row aren't copied.")
+                                .font(.caption).foregroundColor(.secondary)
+                        }
+                        .padding(6)
+                    }
+
+                    GroupBox(label: Label("Remembered camera path", systemImage: "video")) {
+                        HStack {
+                            Text(settings.awardsCameraPath.isEmpty ? "None" : settings.awardsCameraPath)
+                                .foregroundColor(settings.awardsCameraPath.isEmpty ? .secondary : .primary)
+                                .lineLimit(1).truncationMode(.middle)
+                            Spacer()
+                            Button("Reset") { settings.awardsCameraPath = "" }.disabled(settings.awardsCameraPath.isEmpty)
+                        }
+                        .padding(6)
+                    }
+                }
                 // More drop-down sections go here.
 
                 GroupBox(label: Label("Updates", systemImage: "arrow.down.circle")) {

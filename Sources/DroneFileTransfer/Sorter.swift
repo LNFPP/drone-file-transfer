@@ -69,7 +69,7 @@ enum FlightLog {
 
 // MARK: - Which kind of CSV
 
-enum CSVKind { case flightLog, threeSixty }
+enum CSVKind { case flightLog, threeSixty, awards }
 
 enum CSVFile {
     static func lines(_ url: URL) throws -> [String] {
@@ -84,8 +84,9 @@ enum CSVFile {
         }
         let h = FlightLog.fields(first).map { $0.lowercased() }
         if h.contains(where: { $0.hasPrefix("drone file") }) { return .threeSixty }
+        if h.contains(where: { $0.hasPrefix("award") }) { return .awards }
         if h.contains(where: { $0.hasPrefix("start") }) && h.contains(where: { $0.hasPrefix("place") }) { return .flightLog }
-        throw NSError(domain: "LotShots", code: 1, userInfo: [NSLocalizedDescriptionKey: "\(url.lastPathComponent) isn't a Lot Shots Flight Log or 360s CSV"])
+        throw NSError(domain: "LotShots", code: 1, userInfo: [NSLocalizedDescriptionKey: "\(url.lastPathComponent) isn't a Lot Shots Flight Log, 360s or Christmas Awards CSV"])
     }
 }
 

@@ -26,6 +26,12 @@ final class AppSettings: ObservableObject {
     @Published var dronePath: String { didSet { save() } }
     @Published var rememberDrone: Bool { didSet { save() } }
 
+    // Xmas-Awards
+    @Published var awardsMainPath: String { didSet { save() } }
+    @Published var awardsTolerance: Int { didSet { save() } }   // seconds
+    @Published var awardsCameraPath: String { didSet { save() } }
+    @Published var rememberAwardsCamera: Bool { didSet { save() } }
+
     init() {
         if let data = d.data(forKey: "places"), let p = try? JSONDecoder().decode([PlaceConfig].self, from: data) {
             places = p
@@ -40,6 +46,10 @@ final class AppSettings: ObservableObject {
         bufferMinutes = d.object(forKey: "bufferMinutes") as? Int ?? 5
         dronePath = d.string(forKey: "dronePath") ?? ""
         rememberDrone = d.object(forKey: "rememberDrone") as? Bool ?? true
+        awardsMainPath = d.string(forKey: "awardsMainPath") ?? ""
+        awardsTolerance = d.object(forKey: "awardsTolerance") as? Int ?? 10
+        awardsCameraPath = d.string(forKey: "awardsCameraPath") ?? ""
+        rememberAwardsCamera = d.object(forKey: "rememberAwardsCamera") as? Bool ?? true
         Folders.defaultStart = communitiesPath
     }
 
@@ -53,6 +63,10 @@ final class AppSettings: ObservableObject {
         d.set(bufferMinutes, forKey: "bufferMinutes")
         d.set(rememberDrone ? dronePath : "", forKey: "dronePath")
         d.set(rememberDrone, forKey: "rememberDrone")
+        d.set(awardsMainPath, forKey: "awardsMainPath")
+        d.set(awardsTolerance, forKey: "awardsTolerance")
+        d.set(rememberAwardsCamera ? awardsCameraPath : "", forKey: "awardsCameraPath")
+        d.set(rememberAwardsCamera, forKey: "rememberAwardsCamera")
     }
 
     static func key(_ name: String) -> String {
