@@ -416,8 +416,8 @@ final class RunModel: ObservableObject {
                 for j in g.jobs {
                     DispatchQueue.main.async { self.status = "Copying \(j.file.name) \u{2192} \(g.label)" }
                     switch Sorter.copyVerified(j.file, to: j.dir, as: j.name) {
-                    case .copied: rep.copied += 1
-                    case .alreadyThere: rep.alreadyThere += 1
+                    case .copied(_): rep.copied += 1
+                    case .alreadyThere(_): rep.alreadyThere += 1
                     case .failed(let why): rep.failed.append((j.file.name, why))
                     }
                     done += 1

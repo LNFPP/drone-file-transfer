@@ -37,6 +37,7 @@ struct AwardsReport {
     var noClip: [AwardRow] = []        // rows with no clip in their time
     var skipped: [String] = []         // awards you chose to skip
     var leftAlone = 0                  // clips not in any CSV row's time
+    var results: [(name: String, url: URL, note: String)] = []   // where each clip ended up
 }
 
 final class AwardsModel: ObservableObject {
@@ -162,8 +163,8 @@ final class AwardsModel: ObservableObject {
                     DispatchQueue.main.async { self.status = "Copying \(c.file.name) \u{2192} \(g.award)" }
                     // Never renamed: keeps the camera's file name.
                     switch Sorter.copyVerified(c.file, to: g.folder) {
-                    case .copied: rep.copied += 1
-                    case .alreadyThere: rep.alreadyThere += 1
+                    case .copied(let u): rep.copied += 1; rep.results.append((c.file.name, u, "copied"))
+                    case .alreadyThere(let u): rep.alreadyThere += 1; rep.results.append((c.file.name, u, "already there"))
                     case .failed(let why): rep.failed.append((c.file.name, why))
                     }
                     done += 1
@@ -408,6 +409,25 @@ struct AwardsRunSection: View {
                     VStack(alignment: .leading) {
                         ForEach(Array(model.report.failed.enumerated()), id: \.offset) { item in
                             Text("\(item.element.0) \u{2014} \(item.element.1)").font(.callout).textSelection(.enabled)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(6)
+                }
+            }
+            if !model.report.results.isEmpty {
+                GroupBox(label: Text("Where each clip is (\(model.report.results.count))")) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(model.report.results.enumerated()), id: \.offset) { item in
+                            let r = item.element
+                            HStack(alignment: .firstTextBaseline) {
+                                Image(systemName: FileManager.default.fileExists(atPath: r.url.path) ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                    .foregroundColor(FileManager.default.fileExists(atPath: r.url.path) ? .green : .red)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("\(r.name)  \u{00B7}  \(r.note)").font(.callout)
+                                    Text(r.url.path).font(.caption).foregroundColor(.secondary).textSelection(.enabled)
+                                }
+                                Spacer()
+                                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([r.url]) }
+                            }
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(6)
                 }

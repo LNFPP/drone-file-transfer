@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import ImageIO
+import AppKit
 
 // MARK: - Flight Log CSV
 
@@ -313,7 +314,7 @@ enum Sorter {
 
     // MARK: - Safe copy
 
-    enum CopyResult { case copied, alreadyThere, failed(String) }
+    enum CopyResult { case copied(URL), alreadyThere(URL), failed(String) }
 
     static func sha256(_ url: URL) throws -> SHA256Digest {
         let h = try FileHandle(forReadingFrom: url)
@@ -336,7 +337,7 @@ enum Sorter {
             var dest = dir.appendingPathComponent(name ?? f.name)
             if fm.fileExists(atPath: dest.path) {
                 let existing = (try? fm.attributesOfItem(atPath: dest.path)[.size] as? Int64) ?? -1
-                if existing == f.size { return .alreadyThere }
+                if existing == f.size { return .alreadyThere(dest) }
                 let base = dest.deletingPathExtension().lastPathComponent, ext = dest.pathExtension
                 var n = 2
                 repeat {
@@ -353,7 +354,14 @@ enum Sorter {
                 return .failed("copy didn't match the original")
             }
             try fm.moveItem(at: tmp, to: dest)
-            return .copied
+            // Make sure Finder shows it: never hidden, and tell Finder the folder changed.
+            var v = URLResourceValues()
+            v.isHidden = false
+            var d = dest
+            try? d.setResourceValues(v)
+            let folder = dir.path
+            DispatchQueue.main.async { NSWorkspace.shared.noteFileSystemChanged(folder) }
+            return .copied(dest)
         } catch {
             return .failed(error.localizedDescription)
         }
