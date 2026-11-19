@@ -48,7 +48,7 @@ final class AppSettings: ObservableObject {
         dronePath = d.string(forKey: "dronePath") ?? ""
         rememberDrone = d.object(forKey: "rememberDrone") as? Bool ?? true
         awardsMainPath = d.string(forKey: "awardsMainPath") ?? ""
-        awardsTolerance = d.object(forKey: "awardsTolerance") as? Int ?? 10
+        awardsTolerance = d.object(forKey: "awardsTolerance2") as? Int ?? 3
         awardsCameraPath = d.string(forKey: "awardsCameraPath") ?? ""
         rememberAwardsCamera = d.object(forKey: "rememberAwardsCamera") as? Bool ?? true
         Folders.defaultStart = communitiesPath
@@ -65,7 +65,7 @@ final class AppSettings: ObservableObject {
         d.set(rememberDrone ? dronePath : "", forKey: "dronePath")
         d.set(rememberDrone, forKey: "rememberDrone")
         d.set(awardsMainPath, forKey: "awardsMainPath")
-        d.set(awardsTolerance, forKey: "awardsTolerance")
+        d.set(awardsTolerance, forKey: "awardsTolerance2")
         d.set(rememberAwardsCamera ? awardsCameraPath : "", forKey: "awardsCameraPath")
         d.set(rememberAwardsCamera, forKey: "rememberAwardsCamera")
     }

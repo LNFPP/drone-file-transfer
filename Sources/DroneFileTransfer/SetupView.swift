@@ -104,11 +104,11 @@ struct SetupView: View {
                         .padding(6)
                     }
 
-                    GroupBox(label: Label("Clock tolerance", systemImage: "clock")) {
+                    GroupBox(label: Label("Matching", systemImage: "clock")) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Stepper("\(settings.awardsTolerance) seconds before Start and after Stop",
-                                    value: $settings.awardsTolerance, in: 0...300, step: 5)
-                            Text("Allows for the camera's clock and the phone's clock being slightly different. A clip goes to the row whose Start\u{2013}Stop time it overlaps the most. Clips outside every row aren't copied.")
+                            Stepper("Match within \(settings.awardsTolerance) second\(settings.awardsTolerance == 1 ? "" : "s") of each Start Time",
+                                    value: $settings.awardsTolerance, in: 1...60)
+                            Text("The Tracker starts the camera over Bluetooth, so each row's Start Time is when its clip started. Each row gets the one clip that started closest to it (after correcting for the camera's clock being a little off). Lower = stricter.")
                                 .font(.caption).foregroundColor(.secondary)
                         }
                         .padding(6)

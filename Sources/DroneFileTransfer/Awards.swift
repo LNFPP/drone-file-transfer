@@ -149,26 +149,54 @@ enum ClipReader {
 // MARK: - Matching clips to rows
 
 enum AwardsMatcher {
-    /// Each clip goes to the row whose Start–Stop time it overlaps the most
-    /// (both widened by `tolerance` seconds for small clock differences).
-    /// If it overlaps none, it's not copied.
-    static func match(_ clips: [Clip], rows: [AwardRow], tolerance: TimeInterval) -> (byRow: [UUID: [Clip]], unused: [Clip]) {
+    struct Result {
         var byRow: [UUID: [Clip]] = [:]
         var unused: [Clip] = []
-        for c in clips {
-            var best: (row: AwardRow, overlap: Double, distance: Double)?
-            for r in rows {
-                let from = r.start.addingTimeInterval(-tolerance), to = r.stop.addingTimeInterval(tolerance)
-                let overlap = min(c.end, to).timeIntervalSince(max(c.start, from))
-                guard overlap >= 0 else { continue }
-                let distance = abs(c.start.timeIntervalSince(r.start))
-                if best == nil || overlap > best!.overlap || (overlap == best!.overlap && distance < best!.distance) {
-                    best = (r, overlap, distance)
-                }
+        var error: [URL: Double] = [:]   // seconds between a clip's start and its row's Start (after clock fix)
+        var clockOffset: Double = 0      // camera clock minus phone clock, in seconds
+    }
+
+    /// The Tracker starts/stops the camera over Bluetooth, so each row's Start Time is when its clip started.
+    /// 1. Works out how far the camera clock is from the phone clock (the typical gap between
+    ///    each row's Start and the nearest clip start).
+    /// 2. Pairs each row with ONE clip: the closest start (stop as a tie-breaker), within `tolerance`
+    ///    seconds after the clock fix. Closest pairs are made first; each clip is used once.
+    static func match(_ clips: [Clip], rows: [AwardRow], tolerance: TimeInterval) -> Result {
+        var r = Result()
+        guard !clips.isEmpty, !rows.isEmpty else { r.unused = clips; return r }
+
+        // 1. Clock offset: median of nearest-start gaps that are within 10 minutes.
+        var gaps: [Double] = []
+        for row in rows {
+            if let d = clips.map({ $0.start.timeIntervalSince(row.start) }).min(by: { abs($0) < abs($1) }), abs(d) <= 600 {
+                gaps.append(d)
             }
-            if let b = best { byRow[b.row.id, default: []].append(c) } else { unused.append(c) }
         }
-        return (byRow, unused)
+        if !gaps.isEmpty {
+            let g = gaps.sorted()
+            r.clockOffset = g.count % 2 == 1 ? g[g.count / 2] : (g[g.count / 2 - 1] + g[g.count / 2]) / 2
+        }
+
+        // 2. All candidate pairs within tolerance, closest first.
+        var pairs: [(row: AwardRow, clip: Clip, startErr: Double, score: Double)] = []
+        for row in rows {
+            for c in clips {
+                let startErr = c.start.timeIntervalSince(row.start) - r.clockOffset
+                guard abs(startErr) <= tolerance else { continue }
+                let stopErr = abs(c.end.timeIntervalSince(row.stop) - r.clockOffset)
+                pairs.append((row, c, startErr, abs(startErr) + 0.25 * stopErr))
+            }
+        }
+        pairs.sort { $0.score < $1.score }
+        var usedRows = Set<UUID>(), usedClips = Set<URL>()
+        for p in pairs where !usedRows.contains(p.row.id) && !usedClips.contains(p.clip.file.url) {
+            usedRows.insert(p.row.id)
+            usedClips.insert(p.clip.file.url)
+            r.byRow[p.row.id] = [p.clip]
+            r.error[p.clip.file.url] = p.startErr
+        }
+        r.unused = clips.filter { !usedClips.contains($0.file.url) }
+        return r
     }
 }
 

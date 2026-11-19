@@ -36,7 +36,8 @@ struct AwardsReport {
     var failed: [(String, String)] = []
     var noClip: [AwardRow] = []        // rows with no clip in their time
     var skipped: [String] = []         // awards you chose to skip
-    var leftAlone = 0                  // clips not in any CSV row's time
+    var leftAlone = 0                  // clips not matched to any CSV row
+    var clockOffset = 0.0              // camera clock minus phone clock (s)
     var results: [(name: String, url: URL, note: String)] = []   // where each clip ended up
 }
 
@@ -56,6 +57,8 @@ final class AwardsModel: ObservableObject {
     private var rows: [AwardRow] { csvs.flatMap { $0.rows } }
     private var byRow: [UUID: [Clip]] = [:]
     private var leftAlone = 0
+    private var clockOffset = 0.0
+    @Published var clipError: [URL: Double] = [:]
     private var chosen: [String: String] = [:]   // folderKey -> folder for this run
     private var skipped = Set<String>()
 
@@ -91,6 +94,8 @@ final class AwardsModel: ObservableObject {
             DispatchQueue.main.async {
                 self.byRow = m.byRow
                 self.leftAlone = m.unused.count
+                self.clockOffset = m.clockOffset
+                self.clipError = m.error
                 self.collectNeeds(settings: settings)
             }
         }
@@ -132,6 +137,7 @@ final class AwardsModel: ObservableObject {
         var byFolder: [String: AwardGroup] = [:]
         var rep = AwardsReport()
         rep.leftAlone = leftAlone
+        rep.clockOffset = clockOffset
         for r in rows {
             let clips = byRow[r.id] ?? []
             if clips.isEmpty { rep.noClip.append(r); continue }
@@ -334,8 +340,13 @@ struct AwardsRunSection: View {
     private var preview: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Ready to copy").font(.title2.bold())
-            Text("Only clips that fall within a CSV row's Start\u{2013}Stop time are copied, with their camera names. Check each folder path below \u{2014} it's found by matching the CSV names to your folders. Nothing on the card is moved or deleted.")
+            Text("Each CSV row is matched to the one clip that started at its Start Time. Only matched clips are copied, with their camera names. Check each folder path below \u{2014} it's found by matching the CSV names to your folders. Nothing on the card is moved or deleted.")
                 .foregroundColor(.secondary)
+            if abs(model.report.clockOffset) >= 0.5 {
+                Text(String(format: "Camera clock is %.1f s %@ the phone \u{2014} corrected for automatically.",
+                            abs(model.report.clockOffset), model.report.clockOffset > 0 ? "ahead of" : "behind"))
+                    .font(.callout).foregroundColor(.secondary)
+            }
             ForEach(model.groups) { g in
                 GroupBox {
                     VStack(alignment: .leading, spacing: 4) {
@@ -348,7 +359,7 @@ struct AwardsRunSection: View {
                         }
                         Text(g.folder.path).font(.caption).foregroundColor(.secondary).textSelection(.enabled)
                         ForEach(g.clips, id: \.self) { c in
-                            Text("\(c.file.name)  \u{00B7}  \(time(c.start)) \u{2013} \(time(c.end))")
+                            Text("\(c.file.name)  \u{00B7}  \(time(c.start)) \u{2013} \(time(c.end))" + (model.clipError[c.file.url].map { String(format: "  \u{00B7}  %+.1f s from Start", $0) } ?? ""))
                                 .font(.caption.monospacedDigit()).foregroundColor(.secondary)
                         }
                     }
@@ -363,7 +374,7 @@ struct AwardsRunSection: View {
                 Text("Skipped: " + model.report.skipped.joined(separator: "; ")).font(.callout).foregroundColor(.secondary)
             }
             if model.report.leftAlone > 0 {
-                Text("\(model.report.leftAlone) clip\(model.report.leftAlone == 1 ? "" : "s") not in any CSV time will be left alone.")
+                Text("\(model.report.leftAlone) clip\(model.report.leftAlone == 1 ? "" : "s") not matched to any CSV row will be left alone.")
                     .font(.callout).foregroundColor(.secondary)
             }
             HStack {
