@@ -330,6 +330,23 @@ enum Sorter {
 
     /// Copies (never moves or deletes) into `dir`, checks the copy matches byte-for-byte, then names it.
     /// A file with the same name and size already there is skipped, so running twice won't duplicate.
+    /// Some cameras mark files hidden, and copying keeps that. Clears it and tells Finder to refresh.
+    static func unhide(_ url: URL) {
+        var v = URLResourceValues()
+        v.isHidden = false
+        var u = url
+        try? u.setResourceValues(v)
+        url.withUnsafeFileSystemRepresentation { p in
+            guard let p = p else { return }
+            var st = stat()
+            if stat(p, &st) == 0 && (st.st_flags & UInt32(UF_HIDDEN)) != 0 {
+                _ = chflags(p, st.st_flags & ~UInt32(UF_HIDDEN))
+            }
+        }
+        let folder = url.deletingLastPathComponent().path
+        DispatchQueue.main.async { NSWorkspace.shared.noteFileSystemChanged(folder) }
+    }
+
     static func copyVerified(_ f: MediaFile, to dir: URL, as name: String? = nil) -> CopyResult {
         let fm = FileManager.default
         do {
@@ -337,7 +354,7 @@ enum Sorter {
             var dest = dir.appendingPathComponent(name ?? f.name)
             if fm.fileExists(atPath: dest.path) {
                 let existing = (try? fm.attributesOfItem(atPath: dest.path)[.size] as? Int64) ?? -1
-                if existing == f.size { return .alreadyThere(dest) }
+                if existing == f.size { unhide(dest); return .alreadyThere(dest) }
                 let base = dest.deletingPathExtension().lastPathComponent, ext = dest.pathExtension
                 var n = 2
                 repeat {
@@ -354,13 +371,7 @@ enum Sorter {
                 return .failed("copy didn't match the original")
             }
             try fm.moveItem(at: tmp, to: dest)
-            // Make sure Finder shows it: never hidden, and tell Finder the folder changed.
-            var v = URLResourceValues()
-            v.isHidden = false
-            var d = dest
-            try? d.setResourceValues(v)
-            let folder = dir.path
-            DispatchQueue.main.async { NSWorkspace.shared.noteFileSystemChanged(folder) }
+            unhide(dest)
             return .copied(dest)
         } catch {
             return .failed(error.localizedDescription)
